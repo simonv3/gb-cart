@@ -94,7 +94,7 @@ const CartFooter = styled.div`
   justify-content: top;
 `;
 
-const AppContainer = styled.div`
+const AppContainer = styled.form`
   max-width: 500px;
   margin: 2rem auto;
   padding: 1rem;
@@ -142,7 +142,7 @@ const App: React.FC = () => {
 
     createOrder(
       selectedCustomer,
-      sales.map((sale) => sale?.id)
+      sales.filter((sale) => !!sale).map((sale) => sale?.id)
     );
     setOrderSuccess(true);
   };
@@ -152,7 +152,7 @@ const App: React.FC = () => {
       const product = products.find((p) => p.id === id);
       if (product) {
         const price = product.fields["Price per unit"];
-        return total + price * quantity;
+        return total + price * quantity || 0;
       }
       return total;
     },
@@ -234,20 +234,24 @@ const App: React.FC = () => {
                     <label>Quantity ({product?.fields.Unit}):</label>
                     <Input
                       type="number"
-                      min={1}
+                      min={0}
+                      step="any"
                       value={selected.get(id)}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value);
+                        let value = 0;
+                        if (e.target.value) {
+                          value = parseFloat(e.target.value);
+                          if (isNaN(value) || value < 0) {
+                            value = 0;
+                          }
+                        }
                         setSelected((prev) => {
                           const updated = new Map(prev);
-                          if (value > 0) {
-                            updated.set(id, value);
-                          } else {
-                            updated.delete(id);
-                          }
+                          updated.set(id, value);
                           return updated;
                         });
                       }}
+                      required
                     />
                   </Quantity>
                   <small
@@ -266,8 +270,10 @@ const App: React.FC = () => {
                     <span>
                       {" "}
                       Total: $
-                      {(product?.fields["Price per unit"] || 0) *
-                        (selected.get(id) || 0)}
+                      {(
+                        (product?.fields["Price per unit"] || 0) *
+                        (selected.get(id) || 0)
+                      ).toFixed(2)}
                     </span>
                   </small>
                 </LI>
