@@ -13,9 +13,16 @@ import { css } from "@emotion/css";
 const Select = styled.select`
   width: 100%;
   margin-bottom: 16px;
-  padding: 0.6em 1.2em;
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
   border: 1px solid #ccc;
+  color: #333;
+  font-size: 1rem;
+
+  option {
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
 `;
 
 const Button = styled.button`
@@ -23,6 +30,7 @@ const Button = styled.button`
   border: 1px solid #ccc;
   padding: 0.6em 1.2em;
   display: inline-block;
+  color: #333;
   background-color: #f9f9f9;
 
   &:hover:not(:disabled) {
@@ -34,6 +42,7 @@ const Input = styled.input`
   padding: 0.6em 1.2em;
   border-radius: 8px;
   border: 1px solid #ccc;
+  font-size: 1rem;
 `;
 
 const UL = styled.ul`
@@ -333,8 +342,14 @@ const App: React.FC = () => {
         )}
         {!orderSuccess && (
           <Button
+            type="button"
             onClick={handleOrder}
-            disabled={selected.size === 0 || !selectedCustomer || loading}
+            disabled={
+              selected.size === 0 ||
+              !selectedCustomer ||
+              loading ||
+              calculatedTotal === "0.00"
+            }
           >
             {loading ? "Placing Order..." : "Place Order"}
           </Button>
