@@ -103,7 +103,7 @@ const AppContainer = styled.form`
 
 const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [selected, setSelected] = useState<Map<string, number>>(new Map());
+  const [selected, setSelected] = useState<Map<string, number | "">>(new Map());
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -152,12 +152,49 @@ const App: React.FC = () => {
       const product = products.find((p) => p.id === id);
       if (product) {
         const price = product.fields["Price per unit"];
-        return total + price * quantity || 0;
+        return total + price * (quantity || 0);
       }
       return total;
     },
     0
   );
+
+  const onCustomerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const customerId = e.target.value;
+    setSelectedCustomer(customerId);
+    setOrderSuccess(false);
+  };
+
+  const onProductAdd = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = Array.from(e.target.selectedOptions);
+    setSelected((existing) => {
+      const mapped = new Map(existing);
+      options.forEach((opt) => {
+        mapped.set(opt.value, 1);
+      });
+      return mapped;
+    });
+    setOrderSuccess(false);
+  };
+
+  const onQuantityChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    id: string
+  ) => {
+    let value: number | "" = "";
+    if (e.target.value) {
+      value = parseFloat(e.target.value);
+      if (isNaN(value) || value < 0) {
+        value = 0;
+      }
+    }
+    setSelected((prev) => {
+      const updated = new Map(prev);
+      updated.set(id, value);
+      return updated;
+    });
+    setOrderSuccess(false);
+  };
 
   const calculatedMarkup = (calculatedSubTotal * 0.05).toFixed(2);
   const calculatedTotal = (
@@ -170,14 +207,7 @@ const App: React.FC = () => {
     <AppContainer>
       <h1>Cart</h1>
       <h2>Select customer:</h2>
-      <Select
-        value={selectedCustomer}
-        onChange={(e) => {
-          const customerId = e.target.value;
-          console.log("Selected customer ID:", customerId);
-          setSelectedCustomer(customerId);
-        }}
-      >
+      <Select value={selectedCustomer} onChange={onCustomerChange}>
         <option value="">-- Select Customer --</option>
         {customers
           .sort((a, b) =>
@@ -192,18 +222,7 @@ const App: React.FC = () => {
           ))}
       </Select>
       <h2>Order Products</h2>
-      <Select
-        onChange={(e) => {
-          const options = Array.from(e.target.selectedOptions);
-          setSelected((existing) => {
-            const mapped = new Map(existing);
-            options.forEach((opt) => {
-              mapped.set(opt.value, 1);
-            });
-            return mapped;
-          });
-        }}
-      >
+      <Select onChange={onProductAdd}>
         {products
           .sort((a, b) => a.fields.Product.localeCompare(b.fields.Product))
           .map((p) => (
@@ -237,20 +256,7 @@ const App: React.FC = () => {
                       min={0}
                       step="any"
                       value={selected.get(id)}
-                      onChange={(e) => {
-                        let value = 0;
-                        if (e.target.value) {
-                          value = parseFloat(e.target.value);
-                          if (isNaN(value) || value < 0) {
-                            value = 0;
-                          }
-                        }
-                        setSelected((prev) => {
-                          const updated = new Map(prev);
-                          updated.set(id, value);
-                          return updated;
-                        });
-                      }}
+                      onChange={(e) => onQuantityChange(e, id)}
                       required
                     />
                   </Quantity>
