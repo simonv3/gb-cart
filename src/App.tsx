@@ -18,6 +18,7 @@ const Select = styled.select`
   border: 1px solid #ccc;
   color: #333;
   font-size: 1rem;
+  background-color: #f9f9f9;
 
   option {
     font-size: 1rem;
