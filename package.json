@@ -13,6 +13,7 @@
     "@emotion/css": "^11.13.5",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@szhsin/react-autocomplete": "^1.2.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "react": "^19.0.0",
