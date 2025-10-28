@@ -24,19 +24,30 @@ import {
   Section,
 } from "./components/components";
 
+const fetchProductsData = async (value?: string) => {
+  return fetchProducts(value).then((products) =>
+    products.map((c) => ({
+      id: c.id,
+      name: `${c.fields.Product} ($${c.fields["Price per unit"].toFixed(
+        2
+      )} per ${c.fields.Unit})`,
+      originalData: c,
+    }))
+  );
+};
+
 const App: React.FC = () => {
   const [loadingFromAirtable, setLoadingFromAirtable] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selected, setSelected] = useState<Map<string, number | "">>(new Map());
+  const [selected, setSelected] = useState<
+    Map<string, { quantity: number | ""; originalData: Product }>
+  >(new Map());
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<AutocompleteItem>();
 
   useEffect(() => {
-    fetchProducts()
-      .then(setProducts)
-      .then(fetchCustomers)
+    fetchCustomers()
       .then(setCustomers)
       .finally(() => setLoadingFromAirtable(false));
   }, []);
@@ -45,7 +56,10 @@ const App: React.FC = () => {
     setSelected((prev) =>
       prev.has(id)
         ? new Map(Array.from(prev).filter(([key]) => key !== id))
-        : new Map(prev).set(id, 1)
+        : new Map(prev).set(id, {
+            quantity: 1,
+            originalData: prev.get(id)?.originalData as Product,
+          })
     );
   };
 
@@ -63,7 +77,7 @@ const App: React.FC = () => {
     setLoading(true);
     const sales = await Promise.all(
       Array.from(selected.keys()).map(async (id) => {
-        const quantity = selected.get(id);
+        const quantity = selected.get(id)?.quantity;
         if (quantity) {
           return await createSale(id, quantity);
         }
@@ -79,8 +93,8 @@ const App: React.FC = () => {
   };
 
   const calculatedSubTotal = Array.from(selected.entries()).reduce(
-    (total, [id, quantity]) => {
-      const product = products.find((p) => p.id === id);
+    (total, [, { quantity, originalData }]) => {
+      const product = originalData;
       if (product) {
         const price = product.fields["Price per unit"];
         return total + price * (quantity || 0);
@@ -94,7 +108,10 @@ const App: React.FC = () => {
     if (!value) return;
     setSelected((existing) => {
       const mapped = new Map(existing);
-      mapped.set(value.id, 1);
+      mapped.set(value.id, {
+        quantity: 1,
+        originalData: value.originalData as Product,
+      });
       return mapped;
     });
     setOrderSuccess(false);
@@ -113,7 +130,10 @@ const App: React.FC = () => {
     }
     setSelected((prev) => {
       const updated = new Map(prev);
-      updated.set(id, value);
+      updated.set(id, {
+        quantity: value,
+        originalData: prev.get(id)?.originalData as Product,
+      });
       return updated;
     });
     setOrderSuccess(false);
@@ -133,6 +153,8 @@ const App: React.FC = () => {
       </div>
     );
   }
+
+  console.log("selectd", selected);
 
   return (
     <AppContainer>
@@ -161,7 +183,7 @@ const App: React.FC = () => {
             <h3>Selected Products:</h3>
             <UL>
               {Array.from(selected.keys()).map((id) => {
-                const product = products.find((p) => p.id === id);
+                const product = selected.get(id)?.originalData;
                 return (
                   <LI key={id}>
                     <ProductName>
@@ -179,7 +201,7 @@ const App: React.FC = () => {
                         type="number"
                         min={0}
                         step="any"
-                        value={selected.get(id)}
+                        value={selected.get(id)?.quantity}
                         onChange={(e) => onQuantityChange(e, id)}
                         required
                       />
@@ -202,7 +224,7 @@ const App: React.FC = () => {
                         Total: $
                         {(
                           (product?.fields["Price per unit"] || 0) *
-                          (selected.get(id) || 0)
+                          (selected.get(id)?.quantity || 0)
                         ).toFixed(2)}
                       </span>
                     </small>
@@ -214,26 +236,11 @@ const App: React.FC = () => {
         )}
         <Autocomplete
           label="Choose a product"
-          items={products.map((c) => ({
-            id: c.id,
-            name: `${c.fields.Product} ($${c.fields["Price per unit"].toFixed(
-              2
-            )} per ${c.fields.Unit})`,
-          }))}
+          fetchData={fetchProductsData}
           selected={undefined}
           onSelectChange={onProductAdd}
         />
       </Section>
-      {/* <Select onChange={onProductAdd}>
-        {products
-          .sort((a, b) => a.fields.Product.localeCompare(b.fields.Product))
-          .map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.fields.Product} (${p.fields["Price per unit"].toFixed(2)} per{" "}
-              {p.fields.Unit})
-            </option>
-          ))}
-      </Select> */}
       <Section>
         <h3>Order Summary</h3>
         <table style={{ width: "100%", marginBottom: 16 }}>

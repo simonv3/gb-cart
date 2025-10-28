@@ -16,9 +16,17 @@ export const fetchOrders = async (): Promise<Order[]> => {
   return data.records;
 };
 
-export const fetchProducts = async (): Promise<Product[]> => {
+export const fetchProducts = async (value?: string): Promise<Product[]> => {
+  let filterFormula;
+  if (value) {
+    filterFormula = `FIND(LOWER("${value}"), LOWER({Product}))`;
+  }
   const res = await fetch(
-    `https://api.airtable.com/v0/${BASE_ID}/${PRODUCTS_TABLE}`,
+    `https://api.airtable.com/v0/${BASE_ID}/${PRODUCTS_TABLE}${
+      filterFormula
+        ? `?filterByFormula=${encodeURIComponent(filterFormula)}`
+        : ""
+    }`,
     {
       headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` },
     }

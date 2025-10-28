@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useCombobox, autocomplete } from "@szhsin/react-autocomplete";
 import { Input } from "./components";
 import styled from "@emotion/styled";
+import { debounce } from "lodash";
+import React from "react";
 
 const OptionList = styled.ul`
   li {
@@ -15,21 +17,42 @@ const OptionList = styled.ul`
 export type AutocompleteItem = {
   id: string;
   name: string;
+  originalData?: unknown;
 };
 
 const Autocomplete: React.FC<{
-  items: AutocompleteItem[];
+  items?: AutocompleteItem[];
   label: string;
   selected?: AutocompleteItem;
   onSelectChange: (value?: AutocompleteItem) => void;
-}> = ({ items, label, selected, onSelectChange }) => {
+  fetchData?: (inputValue?: string) => Promise<AutocompleteItem[]>;
+}> = ({
+  items: existingItems = [],
+  label,
+  selected,
+  onSelectChange,
+  fetchData,
+}) => {
   const [value, setValue] = useState<string>();
+  const [items, setItems] = useState<AutocompleteItem[]>(existingItems);
 
-  const filteredItems = value
-    ? items.filter((item) =>
-        item.name.toLowerCase().includes(value.toLowerCase())
-      )
-    : items;
+  const filteredItems =
+    value && !fetchData
+      ? items.filter((item) =>
+          item.name.toLowerCase().includes(value.toLowerCase())
+        )
+      : items;
+
+  const debounced = React.useMemo(
+    () =>
+      debounce(async (inputValue?: string) => {
+        if (fetchData) {
+          const fetchedItems = await fetchData(inputValue);
+          setItems(fetchedItems);
+        }
+      }, 1000),
+    [fetchData]
+  );
 
   const {
     getLabelProps,
@@ -46,7 +69,10 @@ const Autocomplete: React.FC<{
     items: filteredItems,
     getItemValue: (item) => item.name,
     value: value,
-    onChange: setValue,
+    onChange: (newValue) => {
+      setValue(newValue);
+      debounced(newValue);
+    },
     selected,
     isEqual: (a, b) => a?.id === b?.id,
     onSelectChange,
@@ -104,7 +130,7 @@ const Autocomplete: React.FC<{
             </li>
           ))
         ) : (
-          <li>No results</li>
+          <li>{fetchData ? "Start typing to search..." : "No results"}</li>
         )}
       </OptionList>
     </div>
